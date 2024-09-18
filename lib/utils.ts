@@ -10,6 +10,8 @@ export function formatTime(minutes: number): string {
   }
 }
 
+// Helper functions, mostly to format stuff
+
 export function formatDate(dateString: string): string {
   const date = new Date(dateString);
   const day = date.getDate();
