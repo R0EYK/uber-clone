@@ -15,6 +15,7 @@ import Map from "@/components/Map";
 import { useLocationStore } from "@/store";
 import { useEffect, useState } from "react";
 import * as Location from "expo-location";
+import { router } from "expo-router";
 
 export default function Page() {
   const { setUserLocation, setDestinationLocation } = useLocationStore(); // Using the UseLocationStore we created with zustand at @/store to get the set functions so we could update the user destination and location
@@ -128,7 +129,15 @@ export default function Page() {
   ]; // Mock data for rides to display on the homepage
   const loading = false;
   const handleSignOut = () => {};
-  const handleDestinationPress = () => {};
+  const handleDestinationPress = (location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  }) => {
+    setDestinationLocation(location);
+    // @ts-ignore
+    router.push("(root)/find-ride");
+  };
 
   // This useEffect is for asking location access from the user device, we send an empty array as the dependency so it would only ask for it once the component is being rendered for the first time
   useEffect(() => {

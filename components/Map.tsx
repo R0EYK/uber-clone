@@ -2,60 +2,20 @@ import { View, Image, Text, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
 import MapView, { Marker, Callout, PROVIDER_DEFAULT } from "react-native-maps";
 import { useDriverStore, useLocationStore } from "@/store";
-import { calculateRegion, generateMarkersFromData } from "@/lib/map";
-import { MarkerData } from "@/types/type";
+import {
+  calculateDriverTimes,
+  calculateRegion,
+  generateMarkersFromData,
+} from "@/lib/map";
+import { Driver, MarkerData } from "@/types/type";
 import { icons } from "@/constants";
 import CustomButton from "@/components/CustomButton";
-
-// Mock data for drivers for now
-const drivers = [
-  {
-    id: "1",
-    first_name: "James",
-    last_name: "Wilson",
-    profile_image_url:
-      "https://ucarecdn.com/dae59f69-2c1f-48c3-a883-017bcf0f9950/-/preview/1000x666/",
-    car_image_url:
-      "https://ucarecdn.com/a2dc52b2-8bf7-4e49-9a36-3ffb5229ed02/-/preview/465x466/",
-    car_seats: 4,
-    rating: "4.80",
-  },
-  {
-    id: "2",
-    first_name: "David",
-    last_name: "Brown",
-    profile_image_url:
-      "https://ucarecdn.com/6ea6d83d-ef1a-483f-9106-837a3a5b3f67/-/preview/1000x666/",
-    car_image_url:
-      "https://ucarecdn.com/a3872f80-c094-409c-82f8-c9ff38429327/-/preview/930x932/",
-    car_seats: 5,
-    rating: "4.60",
-  },
-  {
-    id: "3",
-    first_name: "Michael",
-    last_name: "Johnson",
-    profile_image_url:
-      "https://ucarecdn.com/0330d85c-232e-4c30-bd04-e5e4d0e3d688/-/preview/826x822/",
-    car_image_url:
-      "https://ucarecdn.com/289764fb-55b6-4427-b1d1-f655987b4a14/-/preview/930x932/",
-    car_seats: 4,
-    rating: "4.70",
-  },
-  {
-    id: "4",
-    first_name: "Robert",
-    last_name: "Green",
-    profile_image_url:
-      "https://ucarecdn.com/fdfc54df-9d24-40f7-b7d3-6f391561c0db/-/preview/626x417/",
-    car_image_url:
-      "https://ucarecdn.com/b6fb3b55-7676-4ff3-8484-fb115e268d32/-/preview/930x932/",
-    car_seats: 4,
-    rating: "4.90",
-  },
-];
+import { useFetch } from "@/lib/fetch";
+import MapViewDirections from "react-native-maps-directions";
 
 const Map = () => {
+  const { data: drivers, loading, error } = useFetch<Driver[]>("/(api)/driver");
+
   // Getting the current user location from our Zustand location store
   const {
     userLongitude,
@@ -65,9 +25,8 @@ const Map = () => {
   } = useLocationStore();
 
   // Getting the selected driver if there is one and the current available drivers from our Zustand drivers store
-  const { selectedDriver, setDrivers } = useDriverStore();
+  const { selectedDriver, setDrivers, setSelectedDriver } = useDriverStore();
   const [markers, setMarkers] = useState<MarkerData[]>([]); // all our markers
-  const [loading, setLoading] = useState(true); // Is the map loading ?
   // Calculate the region
   const region = calculateRegion({
     userLongitude,
@@ -78,37 +37,46 @@ const Map = () => {
 
   // The effect is mainly to load the map data , we will show an ActivityIndicator while we are loading the data, dependencies are everything related to user location or destination location as well as if our drivers change (Driver deleted or added to the drivers list)
   useEffect(() => {
-    const loadMapData = async () => {
-      if (userLatitude && userLongitude) {
-        // Generate markers from data
-        const newMarkers = generateMarkersFromData({
-          data: drivers,
-          userLatitude,
-          userLongitude,
-        });
-        setMarkers(newMarkers);
-        setLoading(false); // Once data is ready, stop loading
-      }
-    };
+    if (Array.isArray(drivers)) {
+      if (!userLatitude || !userLongitude) return;
 
-    loadMapData();
-  }, [
-    userLatitude,
-    userLongitude,
-    destinationLatitude,
-    destinationLongitude,
-    drivers,
-  ]);
-  if (loading) {
+      const newMarkers = generateMarkersFromData({
+        data: drivers,
+        userLatitude,
+        userLongitude,
+      });
+
+      setMarkers(newMarkers);
+    }
+  }, [drivers, userLatitude, userLongitude]);
+
+  useEffect(() => {
+    if (markers.length > 0 && destinationLatitude && destinationLongitude) {
+      calculateDriverTimes({
+        markers,
+        userLongitude,
+        userLatitude,
+        destinationLatitude,
+        destinationLongitude,
+      }).then((drivers) => {
+        setDrivers(drivers as MarkerData[]);
+      });
+    }
+  }, [markers, destinationLatitude, destinationLongitude]);
+
+  if (loading || (!userLatitude && !userLongitude))
     return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" color="#0286FF" />
-        <Text className="text-sm font-JakartaSemiBold mt-1">
-          We are looking for your location...
-        </Text>
+      <View className="flex justify-between items-center w-full">
+        <ActivityIndicator size="small" color="#000" />
       </View>
     );
-  }
+
+  if (error)
+    return (
+      <View className="flex justify-between items-center w-full">
+        <Text>Error: {error}</Text>
+      </View>
+    );
 
   return (
     <MapView
@@ -129,7 +97,10 @@ const Map = () => {
             longitude: marker.longitude,
           }}
           title={marker.title}
-          image={icons.marker}
+          image={
+            selectedDriver === marker.id ? icons.selectedMarker : icons.marker
+          }
+          onPress={() => setSelectedDriver(marker.id)}
         >
           {/*Custom Callout for pressing the drivers icon in the Map*/}
           <Callout>
@@ -162,6 +133,32 @@ const Map = () => {
           </Callout>
         </Marker>
       ))}
+      {destinationLatitude && destinationLongitude && (
+        <>
+          <Marker
+            key="destination"
+            coordinate={{
+              latitude: destinationLatitude,
+              longitude: destinationLongitude,
+            }}
+            title="Destination"
+            image={icons.pin}
+          />
+          <MapViewDirections
+            origin={{
+              latitude: userLatitude!,
+              longitude: userLongitude!,
+            }}
+            destination={{
+              latitude: destinationLatitude,
+              longitude: destinationLongitude,
+            }}
+            apikey={process.env.EXPO_PUBLIC_GOOGLE_API_KEY}
+            strokeColor="#0286ff"
+            strokeWidth={4}
+          />
+        </>
+      )}
     </MapView>
   );
 };

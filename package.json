@@ -19,8 +19,10 @@
     "@clerk/shared": "^2.6.2",
     "@expo/metro-runtime": "~3.2.3",
     "@expo/vector-icons": "^14.0.2",
+    "@gorhom/bottom-sheet": "^4.6.4",
     "@neondatabase/serverless": "^0.9.5",
     "@react-navigation/native": "^6.0.2",
+    "@stripe/stripe-react-native": "^0.37.2",
     "expo": "~51.0.28",
     "expo-constants": "~16.0.2",
     "expo-font": "~12.0.9",
@@ -37,8 +39,10 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-native": "0.74.5",
+    "react-native-crypto": "^2.2.0",
     "react-native-gesture-handler": "~2.16.1",
-    "react-native-maps": "^1.18.0",
+    "react-native-google-places-autocomplete": "^2.5.6",
+    "react-native-maps": "^1.14.0",
     "react-native-maps-directions": "^1.9.0",
     "react-native-modal": "^13.0.1",
     "react-native-reanimated": "~3.10.1",
@@ -46,6 +50,7 @@
     "react-native-screens": "3.31.1",
     "react-native-swiper": "^1.6.0",
     "react-native-web": "~0.19.10",
+    "stripe": "^16.12.0",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
@@ -61,7 +66,7 @@
     "jest-expo": "~51.0.3",
     "prettier": "^3.3.3",
     "react-test-renderer": "18.2.0",
-    "tailwindcss": "^3.3.2",
+    "tailwindcss": "3.3.2",
     "typescript": "~5.3.3"
   },
   "private": true
